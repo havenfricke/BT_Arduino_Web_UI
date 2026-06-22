@@ -1,0 +1,10 @@
+{
+  "homepage": "https://havenfricke.github.io/BT_Arduino_Web_UI",
+  "devDependencies": {
+    "gh-pages": "^6.3.0"
+  },
+  "scripts": {
+    "deploy": "gh-pages -d ."
+  }
+
+}
