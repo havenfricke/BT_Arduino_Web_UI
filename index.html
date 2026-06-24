@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arduino Web BLE Dashboard</title>
+    <title>Web BLE Device Scanner</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -56,7 +56,6 @@
             flex-direction: column;
         }
         .terminal-line { margin: 2px 0; }
-        .rx { color: #32D74B; } /* Incoming data */
         .sys { color: #FF9F0A; } /* System messages */
     </style>
 </head>
@@ -64,11 +63,11 @@
 
 <div class="container">
     <div class="header">
-        <h2>Arduino BLE Interface</h2>
+        <h2>Generic BLE Scanner</h2>
         <p id="statusText">Status: Disconnected</p>
     </div>
 
-    <button id="connectBtn">Connect to Bluetooth Device</button>
+    <button id="connectBtn">Scan & Connect to Any Device</button>
     <button id="disconnectBtn" disabled>Disconnect</button>
 
     <h3>Terminal</h3>
@@ -76,12 +75,7 @@
 </div>
 
 <script>
-    // Specific custom UUIDs required to interact with the Arduino once connected
-    const SERVICE_UUID = '19b10000-e8f2-537e-4f6c-d104768a1214';
-    const CHARACTERISTIC_UUID = '19b10001-e8f2-537e-4f6c-d104768a1214';
-
     let bluetoothDevice;
-    let textCharacteristic;
 
     const connectBtn = document.getElementById('connectBtn');
     const disconnectBtn = document.getElementById('disconnectBtn');
@@ -98,19 +92,17 @@
 
     connectBtn.addEventListener('click', async () => {
         try {
-            log('Requesting nearby Bluetooth Devices...', 'sys');
+            log('Scanning for nearby Bluetooth Devices...', 'sys');
             
-            // 1. Request any nearby device. optionalServices is required to access the 
-            // custom service if the selected device happens to be the Arduino.
+            // Request any nearby device. No specific filters or optionalServices.
             bluetoothDevice = await navigator.bluetooth.requestDevice({
-                acceptAllDevices: true,
-                optionalServices: [SERVICE_UUID]
+                acceptAllDevices: true
             });
 
             log(`Device selected: "${bluetoothDevice.name || 'Unnamed Device'}" (${bluetoothDevice.id})`, 'sys');
             bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
 
-            // 2. Connect to the GATT server
+            // Connect to the GATT server
             log('Connecting to GATT Server...', 'sys');
             const server = await bluetoothDevice.gatt.connect();
             log('Successfully connected to GATT Server.', 'sys');
@@ -120,39 +112,12 @@
             connectBtn.disabled = true;
             disconnectBtn.disabled = false;
 
-            // 3. Attempt to discover the specific Arduino services
-            try {
-                log(`Requesting primary service (${SERVICE_UUID})...`, 'sys');
-                const service = await server.getPrimaryService(SERVICE_UUID);
-                log('Target service found.', 'sys');
-
-                log(`Requesting characteristic (${CHARACTERISTIC_UUID})...`, 'sys');
-                textCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
-                log('Target characteristic found.', 'sys');
-
-                log('Starting notifications...', 'sys');
-                await textCharacteristic.startNotifications();
-                textCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
-                log('Notifications started. Ready to receive data.', 'sys');
-
-            } catch (serviceError) {
-                log(`Device does not broadcast the target Arduino service: ${serviceError.message}`, 'sys');
-                log('Connection maintained, but no data will be received.', 'sys');
-            }
+            log('Ready. Note: Reading data streams requires defining specific UUIDs in the code.', 'sys');
 
         } catch (error) {
             log(`Connection process terminated: ${error}`, 'sys');
         }
     });
-
-    // Handle incoming data from Arduino
-    function handleIncomingData(event) {
-        const value = event.target.value;
-        const decoder = new TextDecoder('utf-8');
-        const incomingText = decoder.decode(value);
-        
-        log(`RX: ${incomingText}`, 'rx');
-    }
 
     disconnectBtn.addEventListener('click', () => {
         if (!bluetoothDevice) return;
@@ -167,7 +132,6 @@
         statusText.textContent = 'Status: Disconnected';
         connectBtn.disabled = false;
         disconnectBtn.disabled = true;
-        textCharacteristic = null;
     }
 </script>
 
